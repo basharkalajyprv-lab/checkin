@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Framora check-in</title>
+<style>
+  body{font-family:Arial,sans-serif;text-align:center;padding:40px 16px;margin:0;color:#111;background:#fff}
+  .title{font-size:40px;font-weight:700}
+  .msg{font-size:20px;margin-top:16px;line-height:1.5}
+  .ok{color:#16a34a}.bad{color:#dc2626}.warn{color:#d97706}.info{color:#111827}
+  input{font-size:22px;padding:10px;width:180px;text-align:center;border:1px solid #ccc;border-radius:8px}
+  button{font-size:18px;padding:10px 18px;margin-top:12px;border:0;border-radius:8px;background:#111;color:#fff}
+  .link{margin-top:40px;font-size:14px;text-decoration:underline;background:none;color:#666}
+  .hidden{display:none}
+</style>
+</head>
+<body>
+  <div id="result">
+    <div class="title info" id="title">…</div>
+    <div class="msg" id="msg"></div>
+  </div>
+  <div id="pinBox" class="hidden" style="margin-top:32px">
+    <div class="msg">Staff PIN</div>
+    <input id="pin" type="password" inputmode="numeric" autocomplete="off"><br>
+    <button onclick="savePin()">Save</button>
+  </div>
+  <button id="staffLink" class="link hidden" onclick="showPin()">Staff check-in</button>
+<script>
+  // The Apps Script web app (/exec). It answers JSON when called with api=1.
+  var API = 'https://script.google.com/macros/s/AKfycby0ouKrNQk186UTk7koPxXzi9K6CyAD0mv7U2IjrzV0S8_ANheS4wDXK-Ur7XCBsbV20g/exec';
+
+  var q = new URLSearchParams(location.search);
+  var T = (q.get('t') || '').trim().toUpperCase(), K = q.get('k') || '';
+  var KEY = 'framoraStaffPin';
+  function $(id){ return document.getElementById(id); }
+  function getPin(){ try { return localStorage.getItem(KEY); } catch(e) { return null; } }
+  function setPin(p){ try { p ? localStorage.setItem(KEY, p) : localStorage.removeItem(KEY); } catch(e) {} }
+
+  function show(r){
+    $('title').className = 'title ' + (r.kind === 'pin' ? 'bad' : r.kind);
+    $('title').innerHTML = r.title;      // server escapes guest names
+    $('msg').innerHTML = r.message;
+    if (r.kind === 'pin') { setPin(null); showPin(); }
+  }
+  function busy(){
+    $('staffLink').className = 'link hidden';
+    $('pinBox').className = 'hidden';
+    $('title').className = 'title info';
+    $('title').textContent = '…';
+    $('msg').textContent = '';
+  }
+  // No cookies are sent, so the user's Google accounts never matter.
+  function call(params){
+    var url = API + '?api=1';
+    Object.keys(params).forEach(function(k){ if (params[k]) url += '&' + k + '=' + encodeURIComponent(params[k]); });
+    return fetch(url, { credentials: 'omit', cache: 'no-store' })
+      .then(function(res){ if (!res.ok) throw new Error('Server ' + res.status); return res.json(); })
+      .catch(function(err){ return { kind: 'bad', title: 'Error', message: 'No connection. Try again.<br><small>' + String(err.message || err).replace(/</g,'&lt;') + '</small>' }; });
+  }
+  function run(pin){
+    busy();
+    call({ t: T, k: K, pin: pin }).then(show);
+  }
+  function showPin(){
+    $('pinBox').className = '';
+    $('staffLink').className = 'link hidden';
+    $('pin').focus();
+  }
+  function savePin(){
+    var p = $('pin').value.trim();
+    if (!p) return;
+    setPin(p);
+    run(p);
+  }
+  $('pin').addEventListener('keydown', function(e){ if (e.key === 'Enter') savePin(); });
+
+  var saved = getPin();
+  if (saved) run(saved);
+  else if (!T) { $('title').textContent = 'Check-in'; showPin(); }
+  else {
+    busy();
+    call({ t: T, k: K }).then(function(r){
+      show(r);
+      if (r.kind === 'info') $('staffLink').className = 'link';
+    });
+  }
+</script>
+</body>
+</html>
