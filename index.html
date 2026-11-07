@@ -42,6 +42,7 @@
     <button onclick="savePin()">Save</button>
   </div>
   <button id="staffLink" class="link hidden" onclick="showPin()">Staff check-in</button>
+  <button id="logout" class="link hidden" onclick="logoutStaff()">Log out staff</button>
 <script>
   // The Apps Script web app (/exec). It answers JSON when called with api=1.
   var API = 'https://script.google.com/macros/s/AKfycbx-DAXAyesp4IFPSw5fgvVYjvp9w2qYevBbbadqAaGppzZGtjTt5h0di4TgXlvunjfU/exec';
@@ -84,6 +85,7 @@
     $('result').className = '';
     document.body.className = '';
     $('staffLink').className = 'link hidden';
+    $('logout').className = 'link hidden';
     $('pinBox').className = 'hidden';
     $('title').className = 'title info';
     $('title').textContent = '…';
@@ -99,7 +101,7 @@
   }
   function run(pin){
     busy();
-    call({ t: T, k: K, pin: pin }).then(show);
+    call({ t: T, k: K, pin: pin }).then(function(r){ show(r); if (getPin()) $('logout').className = 'link'; });
   }
   function showPin(){
     $('pinBox').className = '';
@@ -110,12 +112,30 @@
     var p = $('pin').value.trim();
     if (!p) return;
     setPin(p);
-    run(p);
+    if (T) staffView(p); else run(p);
   }
   $('pin').addEventListener('keydown', function(e){ if (e.key === 'Enter') savePin(); });
 
+  // Staff phone: show the ticket first, check in only when the staff member taps the button.
+  function staffView(pin){
+    busy();
+    call({ t: T, k: K }).then(function(r){
+      show(r);
+      if (r.kind === 'info' && r.ticket) {
+        $('title').className = 'title info';
+        $('title').innerHTML = '&#127903;&#65039; ' + esc(r.name || 'Guest');
+        $('msg').innerHTML = esc(r.ticket) + (r.guest ? ' &middot; Guest ' + esc(r.guest) : '') +
+          '<br><button id="ciBtn" style="margin-top:22px;font-size:22px;padding:16px 34px;background:#1f8a4c">&#9989; Check in</button>';
+        $('ciBtn').onclick = function(){ run(pin); };
+      }
+      $('logout').className = 'link';
+    });
+  }
+  function logoutStaff(){ setPin(null); location.reload(); }
+
   var saved = getPin();
-  if (saved) run(saved);
+  if (saved && T) staffView(saved);
+  else if (saved) { run(saved); $('logout').className = 'link'; }
   else if (!T) { $('title').textContent = 'Check-in'; showPin(); }
   else {
     busy();
