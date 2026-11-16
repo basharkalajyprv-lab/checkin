@@ -66,14 +66,14 @@
     $('ticket').innerHTML =
       '<div class="tk">' +
         '<div class="tk-head"><div class="tk-brand">FRAMOR<b>&#923;</b> 360</div>' +
-        '<div class="tk-event">' + esc(r.event || 'Beauty Party on a Yacht, presented by Estel') + '</div><div class="tk-sub">MON 25 JAN 2027 · BOARDING 5:00 PM</div></div>' +
+        '<div class="tk-event">' + esc(r.event || 'Beauty Party on a Yacht, presented by Estel') + '</div><div class="tk-sub">DUBAI</div></div>' +
         '<div class="tk-bar"></div>' +
         '<div class="tk-body">' +
           '<img class="tk-qr" alt="Ticket QR code" src="' + qr + '">' +
           '<div class="tk-id">' + esc(r.ticket) + '</div>' +
           '<div class="tk-who">' + esc(r.name) + (r.guest ? ' · Guest ' + esc(r.guest) : '') + '</div>' +
           '<div class="tk-note">Admits one guest. Show this QR code at boarding.</div>' +
-          '<div class="tk-venue"><b>Gate 3, Dubai Harbour</b><br>Berth AA22<br><a href="https://maps.app.goo.gl/rJ59ixttffokEjNh8">Open in Google Maps</a></div>' +
+          '<div class="tk-venue"><b>Monday, 25 January 2027</b><br><b>Boarding 5:00 PM</b><br>About 3–4 hours on board (back around 8–9 PM)<br><b>Gate 3, Dubai Harbour</b><br>Berth AA22<br><a href="https://maps.app.goo.gl/rJ59ixttffokEjNh8">Open in Google Maps</a></div>' +
         '</div>' +
       '</div>';
   }
