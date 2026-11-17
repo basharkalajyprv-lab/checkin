@@ -31,6 +31,7 @@
   .spin{width:54px;height:54px;border:6px solid #eee;border-top-color:#ffa732;border-radius:50%;margin:30px auto 18px;animation:sp 0.8s linear infinite}
   @keyframes sp{to{transform:rotate(360deg)}}
 .tk-venue{margin-top:16px;padding-top:14px;border-top:1px solid #e6e3dc;font:14px/1.6 Arial,sans-serif;color:#1a1e25}.tk-venue a{color:#1a1e25;font-weight:700}
+.tk-pres{margin-top:12px;font:600 10px/1 Arial,sans-serif;letter-spacing:3px;color:#9aa0a8}.tk-logo{display:block;height:34px;margin:8px auto 0}
 </style>
 </head>
 <body>
@@ -66,7 +67,7 @@
     $('ticket').innerHTML =
       '<div class="tk">' +
         '<div class="tk-head"><div class="tk-brand">FRAMOR<b>&#923;</b> 360</div>' +
-        '<div class="tk-event">' + esc(r.event || 'Beauty Party on a Yacht, presented by Estel') + '</div><div class="tk-sub">DUBAI</div></div>' +
+        '<div class="tk-event">' + 'Beauty Party on a Yacht' + '</div><div class="tk-pres">PRESENTED BY</div><img class="tk-logo" src="estel-white.png" alt="ESTEL"><div class="tk-sub">DUBAI</div></div>' +
         '<div class="tk-bar"></div>' +
         '<div class="tk-body">' +
           '<img class="tk-qr" alt="Ticket QR code" src="' + qr + '">' +
