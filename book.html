@@ -122,7 +122,7 @@
   }
 
   function teamNeed(){ return Math.max(info.teamMin, info.registered || 0); }
-  function unitFor(q){ return q >= teamNeed() ? info.team : info.single; }
+  function unitFor(q){ return info.promo ? info.promo.price : q >= teamNeed() ? info.team : info.single; }
 
   function render(){
     var unit = unitFor(qty), team = unit === info.team && info.team !== info.single;
@@ -135,7 +135,12 @@
     $('was').classList.toggle('hidden', !team);
     $('total').textContent = aed(unit * qty);
     var note = $('note');
-    if (team) {
+    if (info.promo) {
+      $('was').textContent = aed(info.promo.was);
+      $('was').classList.remove('hidden');
+      note.className = 'note good';
+      note.textContent = 'Promo code ' + info.promo.code + ' ✓  You save ' + aed(info.promo.was - info.promo.price) + '.';
+    } else if (team) {
       note.className = 'note good';
       note.textContent = 'Team price ✓  You save ' + aed((info.single - info.team) * qty) + '.';
     } else if (info.registered >= info.teamMin && qty < info.registered) {
