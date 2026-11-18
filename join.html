@@ -60,6 +60,16 @@
   .chk input{width:20px;height:20px;margin-top:2px}
   .err{color:#b42318;font-size:14px;margin-top:10px;text-align:center}
 </style>
+<!-- Meta Pixel. No personal data is sent; Advanced Matching stays off. -->
+<script>
+try{
+!function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,document,'script','https://connect.facebook.net/en_US/fbevents.js');
+fbq('set','autoConfig',false,'1691292932672607');
+fbq('init','1691292932672607');
+fbq('track','PageView');
+}catch(e){}
+</script>
+<noscript><img height="1" width="1" style="display:none" alt="" src="https://www.facebook.com/tr?id=1691292932672607&ev=PageView&noscript=1"></noscript>
 </head>
 <body>
 <div class="wrap">
@@ -133,6 +143,7 @@
   var info = null, qty = 1;
 
   function $(id){ return document.getElementById(id); }
+  function px(name, data){ try { if (window.fbq) fbq('track', name, data); } catch (e) {} }
   function show(id){ ['loading','book','done','error'].forEach(function(x){ $(x).classList.toggle('hidden', x !== id); }); }
   function fail(msg){ $('errmsg').textContent = msg; show('error'); }
   function aed(n){ return 'AED ' + Number(n).toLocaleString('en-US'); }
@@ -172,8 +183,17 @@
       if (d.early) { $('badge').textContent = 'EARLY BIRD · UNTIL ' + d.earlyEnds.toUpperCase(); $('badge').classList.remove('hidden'); }
       render();
       show('book');
+      px('ViewContent', { content_name: 'Beauty Party on a Yacht', currency: 'AED' });
     }).catch(function(){ fail('We could not load the booking page. Please try again in a minute.'); });
   }
+
+  var leadSent = false;
+  $('book').addEventListener('focusin', function(e){
+    var t = e.target;
+    if (leadSent || !/^(INPUT|SELECT|TEXTAREA)$/.test(t.tagName) || t.type === 'checkbox') return;
+    leadSent = true;
+    px('Lead', { content_name: 'Form started' });
+  });
 
   $('minus').onclick = function(){ if (qty > 1) { qty--; render(); } };
   $('plus').onclick = function(){ if (qty < info.max) { qty++; render(); } };
@@ -189,7 +209,11 @@
     var b = $('pay'); b.disabled = true; b.textContent = 'Opening secure payment…';
     call({ api: 'join', name: v('name'), role: v('role'), based: v('based'), salon: v('salon'), phone: v('phone'),
            email: v('email'), ig: v('ig'), topics: v('topics'), q: qty, consent: '1', src: SRC }).then(function(d){
-      if (d.kind === 'pay' && d.url) { location.href = d.url; return; }
+      if (d.kind === 'pay' && d.url) {
+        px('InitiateCheckout', { num_items: qty, value: unitFor(qty) * qty, currency: 'AED' });
+        setTimeout(function(){ location.href = d.url; }, 300);
+        return;
+      }
       b.disabled = false; b.textContent = 'Pay now';
       err(d.message || 'Something went wrong. Please try again.');
     }).catch(function(){
