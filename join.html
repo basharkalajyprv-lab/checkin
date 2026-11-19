@@ -59,6 +59,10 @@
   .chk{display:flex;gap:10px;align-items:flex-start;margin-top:16px;font-size:14px}
   .chk input{width:20px;height:20px;margin-top:2px}
   .err{color:#b42318;font-size:14px;margin-top:10px;text-align:center}
+  .value{margin-top:14px;padding:14px 14px 16px;border-radius:14px;background:#fff8ec;border:1px solid #f3dfbd}
+  .value .vp{font:700 15px/1.4 'Space Grotesk',Arial,sans-serif;color:var(--ink)}
+  .value ul{margin:10px 0 0;padding-left:18px;font-size:14px;line-height:1.5}
+  .cta{display:block;width:100%;margin-top:14px;padding:14px;border:0;border-radius:12px;background:var(--ink);color:#fff;font:700 16px/1 'Space Grotesk',Arial,sans-serif;cursor:pointer}
 </style>
 <!-- Meta Pixel. No personal data is sent; Advanced Matching stays off. -->
 <script>
@@ -82,21 +86,31 @@ fbq('track','PageView');
   </div>
   <div class="bar"></div>
   <div class="card">
-    <div id="loading" class="center muted">Loading…</div>
+    <div id="loading" class="center muted hidden">Loading…</div>
 
     <div id="book" class="hidden">
       <p class="hi">Get your ticket</p>
       <div class="muted">A hair showcase evening on the water: live hair demonstrations, the beauty community and a full photo and video team on board.</div>
       <p class="muted" style="margin:10px 0 0"><b>📅 Monday, 25 January 2027 · Boarding 5:00 PM</b><br>📍 Gate 3, Dubai Harbour · Berth AA22</p>
       <div id="badge" class="badge hidden"></div>
+      <div class="value">
+        <div class="vp" id="valueprice">AED 500 early bird until 28 Nov, then AED 600 · Teams of 3+: AED 450 each</div>
+        <ul>
+          <li>Live hair demonstrations up close</li>
+          <li>ESTEL's own space on board</li>
+          <li>The UAE hair community, with a full photo and video team</li>
+          <li>Food, drinks, a party and a DJ</li>
+        </ul>
+        <button type="button" class="cta" id="cta">Book my ticket</button>
+      </div>
 
       <div class="f"><label for="name">YOUR NAME</label><input id="name" autocomplete="name"></div>
       <div class="f"><label for="role">WHAT BEST DESCRIBES YOU?</label><select id="role"><option value="">Choose…</option></select></div>
       <div class="f"><label for="based">WHERE ARE YOU BASED?</label><select id="based"><option value="">Choose…</option></select></div>
-      <div class="f"><label for="salon">SALON OR COMPANY</label><input id="salon" autocomplete="organization"></div>
+      <div class="f"><label for="salon">SALON OR COMPANY (OPTIONAL)</label><input id="salon" autocomplete="organization"></div>
       <div class="f"><label for="phone">WHATSAPP NUMBER</label><input id="phone" type="tel" autocomplete="tel" placeholder="+971 50 000 0000"></div>
       <div class="f"><label for="email">EMAIL</label><input id="email" type="email" autocomplete="email" placeholder="name@email.com"></div>
-      <div class="f"><label for="ig">INSTAGRAM HANDLE</label><input id="ig" autocapitalize="off" placeholder="@yourhandle"></div>
+      <div class="f"><label for="ig">INSTAGRAM HANDLE (OPTIONAL)</label><input id="ig" autocapitalize="off" placeholder="@yourhandle"></div>
       <div class="f"><label for="topics">ANYTHING YOU WANT BASHAR TO COVER? (OPTIONAL)</label><textarea id="topics" placeholder="Blonding, colour correction, pricing…"></textarea></div>
 
       <div class="label">NUMBER OF GUESTS</div>
@@ -141,6 +155,11 @@ fbq('track','PageView');
   var qs = new URLSearchParams(location.search);
   var SRC = qs.get('utm_source') || qs.get('src') || 'Booking page';
   var info = null, qty = 1;
+  // Shown at once so the form never waits for the server; api=book updates it, api=join stays the source of truth.
+  var EARLY_END = Date.parse('2026-11-28T12:00:00+04:00');
+  var DEFAULT_INFO = Date.now() < EARLY_END
+    ? { kind: 'book', single: 500, team: 450, teamMin: 3, max: 20, left: 250, early: true, earlyEnds: '28 Nov' }
+    : { kind: 'book', single: 600, team: 500, teamMin: 3, max: 20, left: 250, early: false, earlyEnds: '' };
 
   function $(id){ return document.getElementById(id); }
   function px(name, data){ try { if (window.fbq) fbq('track', name, data); } catch (e) {} }
@@ -155,6 +174,10 @@ fbq('track','PageView');
   function unitFor(q){ return q >= info.teamMin ? info.team : info.single; }
 
   function render(){
+    qty = Math.max(1, Math.min(qty, info.max));
+    $('valueprice').textContent = info.early
+      ? aed(info.single) + ' early bird until ' + info.earlyEnds + ', then AED 600 · Teams of ' + info.teamMin + '+: ' + aed(info.team) + ' each'
+      : aed(info.single) + ' per guest · Teams of ' + info.teamMin + '+: ' + aed(info.team) + ' each';
     var unit = unitFor(qty), team = unit === info.team && info.team !== info.single;
     $('num').textContent = qty;
     $('guests').textContent = qty === 1 ? '1 guest' : qty + ' guests';
@@ -173,19 +196,25 @@ fbq('track','PageView');
   function err(msg){ var e = $('formerr'); e.textContent = msg; e.classList.remove('hidden'); }
   ['name','role','based','phone','email','ig','consent'].forEach(function(id){ $(id).addEventListener('input', function(){ $('formerr').classList.add('hidden'); }); });
 
+  function badge(){
+    if (info.early && info.earlyEnds) { $('badge').textContent = 'EARLY BIRD · UNTIL ' + info.earlyEnds.toUpperCase(); $('badge').classList.remove('hidden'); }
+    else $('badge').classList.add('hidden');
+  }
+
   function start(){
     if (qs.get('done')) { show('done'); return; }
     fill($('role'), ROLES); fill($('based'), BASES);
+    info = DEFAULT_INFO;
+    badge(); render(); show('book');
+    px('ViewContent', { content_name: 'Beauty Party on a Yacht', currency: 'AED' });
     call({ api: 'book' }).then(function(d){
-      if (d.kind !== 'book') return fail(d.message || 'Booking is not open right now.');
+      if (!d || d.kind !== 'book') return fail((d && d.message) || 'Booking is not open right now.');
       if (d.left <= 0) return fail('Sorry, the yacht is fully booked.');
-      info = d;
-      if (d.early) { $('badge').textContent = 'EARLY BIRD · UNTIL ' + d.earlyEnds.toUpperCase(); $('badge').classList.remove('hidden'); }
-      render();
-      show('book');
-      px('ViewContent', { content_name: 'Beauty Party on a Yacht', currency: 'AED' });
-    }).catch(function(){ fail('We could not load the booking page. Please try again in a minute.'); });
+      info = d; badge(); render();
+    }).catch(function(){ /* keep the form usable; api=join checks the price */ });
   }
+
+  $('cta').onclick = function(){ $('name').scrollIntoView({ behavior: 'smooth', block: 'center' }); };
 
   var leadSent = false;
   $('book').addEventListener('focusin', function(e){
@@ -204,7 +233,6 @@ fbq('track','PageView');
     if (!v('based')) return err('Please choose where you are based.');
     if (v('phone').replace(/\D/g,'').length < 8) return err('Please enter your WhatsApp number.');
     if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(v('email'))) return err('Please enter a valid email.');
-    if (v('ig').replace('@','').length < 1) return err('Please enter your Instagram handle.');
     if (!$('consent').checked) return err('Please tick the box to be contacted about the event.');
     var b = $('pay'); b.disabled = true; b.textContent = 'Opening secure payment…';
     call({ api: 'join', name: v('name'), role: v('role'), based: v('based'), salon: v('salon'), phone: v('phone'),
