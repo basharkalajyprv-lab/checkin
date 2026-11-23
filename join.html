@@ -63,6 +63,8 @@
   .value .vp{font:700 15px/1.4 'Space Grotesk',Arial,sans-serif;color:var(--ink)}
   .value ul{margin:10px 0 0;padding-left:18px;font-size:14px;line-height:1.5}
   .cta{display:block;width:100%;margin-top:14px;padding:14px;border:0;border-radius:12px;background:var(--ink);color:#fff;font:700 16px/1 'Space Grotesk',Arial,sans-serif;cursor:pointer}
+.more{margin:14px 0 4px;border:1px dashed #d8cdb8;border-radius:12px;padding:12px 14px}.more summary{cursor:pointer;font:700 14px 'Space Grotesk',Arial,sans-serif;list-style:none}.more summary span{font-weight:400;color:#888}.more[open] summary{margin-bottom:12px}
+.wa{display:block;text-align:center;margin:12px 0 4px;padding:13px;border-radius:14px;background:#25D366;color:#fff;font:700 15px 'Space Grotesk',Arial,sans-serif;text-decoration:none}
 </style>
 <!-- Meta Pixel. No personal data is sent; Advanced Matching stays off. -->
 <script>
@@ -102,16 +104,21 @@ fbq('track','PageView');
           <li>Food, drinks, a party and a DJ</li>
         </ul>
         <button type="button" class="cta" id="cta">Book my ticket</button>
+        <a class="wa" href="https://wa.me/971509247690?text=Hi%20Bashar%2C%20I%20have%20a%20question%20about%20Beauty%20Party%20on%20a%20Yacht" target="_blank" rel="noopener" onclick="try{fbq('track','Contact')}catch(e){}">💬 Questions first? Chat with Bashar on WhatsApp</a>
       </div>
 
       <div class="f"><label for="name">YOUR NAME</label><input id="name" autocomplete="name"></div>
+      <div class="f"><label for="phone">WHATSAPP NUMBER</label><input id="phone" type="tel" autocomplete="tel" placeholder="+971 50 000 0000"></div>
+      <div class="f"><label for="email">EMAIL</label><input id="email" type="email" autocomplete="email" placeholder="name@email.com"></div>
+
+
+      <details class="more"><summary>+ Tell us more about you <span>(optional)</span></summary>
       <div class="f"><label for="role">WHAT BEST DESCRIBES YOU?</label><select id="role"><option value="">Choose…</option></select></div>
       <div class="f"><label for="based">WHERE ARE YOU BASED?</label><select id="based"><option value="">Choose…</option></select></div>
       <div class="f"><label for="salon">SALON OR COMPANY (OPTIONAL)</label><input id="salon" autocomplete="organization"></div>
-      <div class="f"><label for="phone">WHATSAPP NUMBER</label><input id="phone" type="tel" autocomplete="tel" placeholder="+971 50 000 0000"></div>
-      <div class="f"><label for="email">EMAIL</label><input id="email" type="email" autocomplete="email" placeholder="name@email.com"></div>
       <div class="f"><label for="ig">INSTAGRAM HANDLE (OPTIONAL)</label><input id="ig" autocapitalize="off" placeholder="@yourhandle"></div>
       <div class="f"><label for="topics">ANYTHING YOU WANT BASHAR TO COVER? (OPTIONAL)</label><textarea id="topics" placeholder="Blonding, colour correction, pricing…"></textarea></div>
+      </details>
 
       <div class="label">NUMBER OF GUESTS</div>
       <div class="qty">
@@ -130,6 +137,7 @@ fbq('track','PageView');
       <label class="chk"><input type="checkbox" id="consent"><span>I'm happy for Bashar Kalaji to contact me about this event.</span></label>
       <div id="formerr" class="err hidden"></div>
       <button class="pay" id="pay">Pay now</button>
+      <a class="wa" href="https://wa.me/971509247690?text=Hi%20Bashar%2C%20I%20have%20a%20question%20about%20Beauty%20Party%20on%20a%20Yacht" target="_blank" rel="noopener" onclick="try{fbq('track','Contact')}catch(e){}">💬 Not sure yet? Ask Bashar on WhatsApp</a>
       <div class="small">Secure payment by Stripe · Card, Apple Pay, Google Pay · Every guest gets their own QR ticket by email</div>
     </div>
 
@@ -229,8 +237,6 @@ fbq('track','PageView');
   $('pay').onclick = function(){
     var v = function(id){ return $(id).value.trim(); };
     if (!v('name')) return err('Please enter your name.');
-    if (!v('role')) return err('Please choose what best describes you.');
-    if (!v('based')) return err('Please choose where you are based.');
     if (v('phone').replace(/\D/g,'').length < 8) return err('Please enter your WhatsApp number.');
     if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(v('email'))) return err('Please enter a valid email.');
     if (!$('consent').checked) return err('Please tick the box to be contacted about the event.');
