@@ -128,6 +128,9 @@ fbq('track','PageView');
       </div>
       <div class="guests" id="guests"></div>
 
+      <div class="f"><label for="code">PROMO CODE (OPTIONAL)</label><input id="code" autocapitalize="characters" autocomplete="off" placeholder="e.g. SARA"></div>
+      <div id="codemsg" class="note hidden"></div>
+
       <div class="price">
         <div class="row"><span class="muted">Price per guest</span><span><span id="was" class="strike hidden"></span><b id="unit"></b></span></div>
         <div class="row"><span>Total</span><span class="total" id="total"></span></div>
@@ -162,7 +165,7 @@ fbq('track','PageView');
   var BASES = ['Dubai','Abu Dhabi or elsewhere in the UAE','Elsewhere in the GCC',"Outside the region — I'd travel for it"];
   var qs = new URLSearchParams(location.search);
   var SRC = qs.get('utm_source') || qs.get('src') || 'Booking page';
-  var info = null, qty = 1;
+  var info = null, qty = 1, CODE = (qs.get('code') || '').trim().toUpperCase();
   // Shown at once so the form never waits for the server; api=book updates it, api=join stays the source of truth.
   var EARLY_END = Date.parse('2026-11-28T12:00:00+04:00');
   var DEFAULT_INFO = Date.now() < EARLY_END
@@ -179,24 +182,28 @@ fbq('track','PageView');
     return fetch(url, { credentials: 'omit', cache: 'no-store' }).then(function(r){ return r.json(); });
   }
   function fill(sel, list){ list.forEach(function(v){ var o = document.createElement('option'); o.value = o.textContent = v; sel.appendChild(o); }); }
-  function unitFor(q){ return q >= info.teamMin ? info.team : info.single; }
+  function unitFor(q){
+    if (info.code) return q >= info.teamMin ? Math.min(info.code.price, info.team) : info.code.price;
+    return q >= info.teamMin ? info.team : info.single;
+  }
 
   function render(){
     qty = Math.max(1, Math.min(qty, info.max));
     $('valueprice').textContent = info.early
       ? aed(info.single) + ' early bird until ' + info.earlyEnds + ', then AED 600 · Teams of ' + info.teamMin + '+: ' + aed(info.team) + ' each'
       : aed(info.single) + ' per guest · Teams of ' + info.teamMin + '+: ' + aed(info.team) + ' each';
-    var unit = unitFor(qty), team = unit === info.team && info.team !== info.single;
+    var unit = unitFor(qty), team = !info.code && unit === info.team && info.team !== info.single;
     $('num').textContent = qty;
     $('guests').textContent = qty === 1 ? '1 guest' : qty + ' guests';
     $('minus').disabled = qty <= 1;
     $('plus').disabled = qty >= info.max;
     $('unit').textContent = aed(unit);
     $('was').textContent = aed(info.single);
-    $('was').classList.toggle('hidden', !team);
+    $('was').classList.toggle('hidden', !(team || (info.code && unit < info.single)));
     $('total').textContent = aed(unit * qty);
     var note = $('note');
-    if (team) { note.className = 'note good'; note.textContent = 'Team price ✓  You save ' + aed((info.single - info.team) * qty) + '.'; }
+    if (info.code) { note.className = 'note good'; note.textContent = 'Code ' + info.code.code + ' ✓  You save ' + aed((info.single - unit) * qty) + '.'; }
+    else if (team) { note.className = 'note good'; note.textContent = 'Team price ✓  You save ' + aed((info.single - info.team) * qty) + '.'; }
     else if (info.team !== info.single) { note.className = 'note warn'; note.textContent = 'Team price from ' + info.teamMin + ' guests: ' + aed(info.team) + ' each.'; }
     else { note.className = 'note hidden'; }
   }
@@ -209,14 +216,32 @@ fbq('track','PageView');
     else $('badge').classList.add('hidden');
   }
 
+  function codeMsg(ok, msg){ var m = $('codemsg'); m.className = 'note ' + (ok ? 'good' : 'warn'); m.textContent = msg; }
+  function applyCode(){
+    var c = $('code').value.trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+    if (c === CODE && info && (info.code || !c)) return;
+    CODE = c;
+    if (!c) { if (info) { info.code = null; render(); } $('codemsg').className = 'note hidden'; return; }
+    codeMsg(true, 'Checking code…');
+    call({ api: 'book', code: c }).then(function(d){
+      if (d && d.kind === 'book' && d.code) { info = d; codeMsg(true, d.code.pct + '% off applied ✓'); render(); px('CustomizeProduct', { content_name: 'Code ' + c }); }
+      else { CODE = ''; if (info) { info.code = null; render(); } codeMsg(false, 'This code is not valid.'); }
+    }).catch(function(){ codeMsg(false, 'Could not check the code. Please try again.'); });
+  }
+  $('code').addEventListener('change', applyCode);
+  $('code').addEventListener('blur', applyCode);
+
   function start(){
     if (qs.get('done')) { show('done'); return; }
     fill($('role'), ROLES); fill($('based'), BASES);
     info = DEFAULT_INFO;
     badge(); render(); show('book');
     px('ViewContent', { content_name: 'Beauty Party on a Yacht', currency: 'AED' });
-    call({ api: 'book' }).then(function(d){
+    if (CODE) { $('code').value = CODE; codeMsg(true, 'Checking code…'); }
+    call(CODE ? { api: 'book', code: CODE } : { api: 'book' }).then(function(d){
+      if (d && d.kind === 'badcode') { CODE = ''; codeMsg(false, 'This code is not valid.'); return call({ api: 'book' }).then(function(x){ if (x && x.kind === 'book') { info = x; badge(); render(); } }); }
       if (!d || d.kind !== 'book') return fail((d && d.message) || 'Booking is not open right now.');
+      if (d.code) codeMsg(true, d.code.pct + '% off applied ✓');
       if (d.left <= 0) return fail('Sorry, the yacht is fully booked.');
       info = d; badge(); render();
     }).catch(function(){ /* keep the form usable; api=join checks the price */ });
@@ -242,7 +267,7 @@ fbq('track','PageView');
     if (!$('consent').checked) return err('Please tick the box to be contacted about the event.');
     var b = $('pay'); b.disabled = true; b.textContent = 'Opening secure payment…';
     call({ api: 'join', name: v('name'), role: v('role'), based: v('based'), salon: v('salon'), phone: v('phone'),
-           email: v('email'), ig: v('ig'), topics: v('topics'), q: qty, consent: '1', src: SRC }).then(function(d){
+           email: v('email'), ig: v('ig'), topics: v('topics'), q: qty, consent: '1', src: CODE ? 'Code ' + CODE : SRC, code: (info && info.code) ? info.code.code : '' }).then(function(d){
       if (d.kind === 'pay' && d.url) {
         px('InitiateCheckout', { num_items: qty, value: unitFor(qty) * qty, currency: 'AED' });
         setTimeout(function(){ location.href = d.url; }, 300);
